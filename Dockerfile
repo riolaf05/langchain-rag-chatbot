@@ -19,5 +19,5 @@ COPY utils/ utils/
 COPY main.py main.py 
 
 #for normal deploy
-ENTRYPOINT ["chainlit", "run" "main.py", "-w"]
+CMD ["chainlit", "run" "main.py", "-w"]
 
