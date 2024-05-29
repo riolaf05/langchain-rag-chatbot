@@ -1,3 +1,5 @@
+#See https://medium.com/@cleancoder/build-a-chatbot-in-minutes-with-chainlit-gpt-4-and-langchain-7690968578f0
+
 from langchain_groq import ChatGroq
 from langchain.memory.buffer import ConversationBufferMemory
 import chainlit as cl
