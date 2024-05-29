@@ -1,48 +1,48 @@
 # DynamoDB
-import boto3
+# import boto3
 import os
 from langchain.docstore.document import Document
 
 AWS_ACCESS_KEY_ID=os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY=os.getenv("AWS_SECRET_ACCESS_KEY")
 
-class DynamoDBManager:
-    def __init__(self, region, table_name):
-        self.region = region
-        self.table_name = table_name
-        self.dynamodb = boto3.resource(
-            "dynamodb",
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name=region,
-        )
-        self.table = self.dynamodb.Table(table_name)
+# class DynamoDBManager:
+#     def __init__(self, region, table_name):
+#         self.region = region
+#         self.table_name = table_name
+#         self.dynamodb = boto3.resource(
+#             "dynamodb",
+#             aws_access_key_id=AWS_ACCESS_KEY_ID,
+#             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+#             region_name=region,
+#         )
+#         self.table = self.dynamodb.Table(table_name)
 
-    def write_item(self, item):
-        try:
-            response = self.table.put_item(Item=item)
-            print("Item added successfully:", response)
-        except Exception as e:
-            print("Error writing item:", e)
+#     def write_item(self, item):
+#         try:
+#             response = self.table.put_item(Item=item)
+#             print("Item added successfully:", response)
+#         except Exception as e:
+#             print("Error writing item:", e)
 
-    def update_item(self, key, update_expression, expression_values):
-        try:
-            response = self.table.update_item(
-                Key=key,
-                UpdateExpression=update_expression,
-                ExpressionAttributeValues=expression_values,
-            )
-            print("Item updated successfully:", response)
-        except Exception as e:
-            print("Error updating item:", e)
+#     def update_item(self, key, update_expression, expression_values):
+#         try:
+#             response = self.table.update_item(
+#                 Key=key,
+#                 UpdateExpression=update_expression,
+#                 ExpressionAttributeValues=expression_values,
+#             )
+#             print("Item updated successfully:", response)
+#         except Exception as e:
+#             print("Error updating item:", e)
 
-    def get_item(self, key):
-        try:
-            response = self.table.get_item(Key=key)
-            print("Item retrieved successfully:", response)
-            return response
-        except Exception as e:
-            print("Error retrieving item:", e)
+#     def get_item(self, key):
+#         try:
+#             response = self.table.get_item(Key=key)
+#             print("Item retrieved successfully:", response)
+#             return response
+#         except Exception as e:
+#             print("Error retrieving item:", e)
 
 
 # Chroma vector DB
