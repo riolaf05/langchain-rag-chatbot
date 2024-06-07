@@ -1,6 +1,11 @@
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 from langchain.memory.buffer import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 import chainlit as cl
 from utils import database_managers, embedding
 import os
@@ -8,28 +13,42 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 # RAG Setup
-def llmama3_llm(question, context):
-    chat = ChatGroq(temperature=0, model_name="Llama3-8b-8192")
-    system = """
-        Sei un assistente nella ricerca di ristoranti o locali o eventi. Date le informazioni di contesto restituisci una lista di ristoranti, locali, eventi richiesti,
-        che soddisfano i requisiti di ricerca.
-        Per ogni elemento indica:
-          + nome del ristorante, locale, evento
-          + indirizzo
-          + descrizione
-          """
-    
-    formatted_prompt = f"Domanda: {question}\n\nContesto: {context}"
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("user", formatted_prompt)])
+def llmama3_chain(question):
+    system_message_prompt = SystemMessagePromptTemplate.from_template(
+        """
+        Sei un chatbot incaricato di rispondere alle domande sulla ricerca di ristoranti o di locali o di eventi.
 
-    chain = prompt | chat
-    return chain.invoke({"text": question})
-def combine_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-def rag_chain(question):
-    retrieved_docs = retriever.invoke(question)
-    formatted_context = combine_docs(retrieved_docs)
-    return llmama3_llm(question, formatted_context)
+        Non dovresti mai rispondere a una domanda con un'altra domanda e dovresti sempre rispondere con la pagina della documentazione più pertinente.
+
+        Non rispondere a domande che non riguardano ristoranti o locali o eventi.
+
+        Data una domanda, dovresti rispondere con un elenco dei ristoranti, eventi o locali più pertinenti, seguento il contesto rilevante qui sotto:
+        {context}
+
+        Per ogni elemento dell'elenco, indica:
+          + nome del ristorante, locale, evento
+          + indirizzo (ove disponibile)
+          + descrizione
+        """
+    )
+    human_message_prompt = HumanMessagePromptTemplate.from_template("{question}")
+
+    llm = ChatGroq(temperature=0.1, model_name="Llama3-8b-8192")
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=retriever,
+        memory=memory,
+        combine_docs_chain_kwargs={
+            "prompt": ChatPromptTemplate.from_messages(
+                [
+                    system_message_prompt,
+                    human_message_prompt,
+                ]
+            ),
+        },
+    )
+    return conversation_chain({"question": question})
 
 
 COLLECTION_NAME = "web-places"
@@ -60,9 +79,9 @@ async def on_chat_start():
 async def main(message: str):
 
     try:
-        res = rag_chain(message.content)
+        res = llmama3_chain(message.content)
         await cl.Message(
-            content=res.content,
+            content=res['answer'],
         ).send()
         
         # await cl.Message(content=answer['result']).send()
