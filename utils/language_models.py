@@ -16,11 +16,16 @@ from langchain.document_loaders.parsers.audio import (
 )
 
 from langchain.chains.question_answering import load_qa_chain
-
+from langchain_core.prompts import ChatPromptTemplate
 from langchain.document_loaders import RSSFeedLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.callbacks import get_openai_callback
 
+from langchain.docstore.document import Document
+
+
+from utils import text_processing
 
 # LangChain
 class LangChainAI:
@@ -50,32 +55,37 @@ class LangChainAI:
         res = llmchain.run(text) + "\n\n"
         return res
 
-    def clean_text(self, docs):
-        """
-        Making the text more understandable by clearing unreadeable stuff,
-        using the chain StuffDocumentsChain:
-        this chain will take a list of documents,
-        inserts them all into a prompt, and passes that prompt to an LLM
-        See: https://python.langchain.com/docs/use_cases/summarization
-        """
+    def clean_text(self, text):
+        '''
+        Cleaning the text by making it more understandable through a LLM
+        '''
 
-        # FIXME!!
+        text_splitter = text_processing.TextSplitter()
+        system = "Sei un assistente agli studi universitari."
+        formatted_prompt = """
+            Di seguito, l'estrazione del testo fatto da un modello di speech-to-text.
+            
+            Viste le limitazioni dei vari modelli il testo non è sempre comprensibile.
+            
+            Riscrivi il testo il più possibile identico a quello di partenza, mantenendo la stessa lunghezza e senza riassumere o eliminare parti di testo, facendo però sì che il testo contenga frasi di testo compiuto.
+            
+            Restituiscimi solo il testo riscritto senza altri commenti (non scrivere mai "Il testo riscritto:"!)
+            
+            Di seguito il testo da riscrivere: {text}
+            
+            Il testo riscritto:
+            
+            """
+        prompt = ChatPromptTemplate.from_messages([("system", system), ("user", formatted_prompt)])
 
-        # Define prompt
-        prompt_template = """Rendi questo testo comprensibile mantenendo comunque il testo originale nella sua interezza:
-        "{text}"
-        Resto comprensibile:"""
-        prompt = PromptTemplate.from_template(prompt_template)
+        # chain = prompt | ChatGroq(temperature=0,model_name="mixtral-8x7b-32768")
+        chain = prompt | self.llm
+        clean_text=[]
+        chunks=text_splitter.fixed_split_text(text)
 
-        # Define LLM chain
-        llm_chain = LLMChain(llm=self.llm, prompt=prompt)
-
-        # Define StuffDocumentsChain
-        stuff_chain = StuffDocumentsChain(
-            llm_chain=llm_chain, document_variable_name="text"
-        )
-        res = stuff_chain.run(docs)
-        return res
+        for chunk in chunks:
+            clean_text.append(chain.invoke(chunk).content)
+        return " ".join(clean_text)
 
     def summarize_text(self, docs):
         """
@@ -363,3 +373,21 @@ class LangChainAI:
     # parent document retriever
     # https://github.com/azharlabs/medium/blob/main/notebooks/LangChain_RAG_Parent_Document_Retriever.ipynb?source=post_page-----5bd5c3474a8a--------------------------------
     # def
+
+    def count_tokens(self, text):
+        """
+        Counts the number of tokens in the given text using the OpenAI API.
+        """
+        with get_openai_callback() as cb:
+            result = self.llm.invoke(text)
+            print(cb)
+
+    def create_documents(self, texts, metadata={"source": "python"}):
+        docs=[]
+        for text in texts:
+            doc = Document(
+                page_content=text,
+                metadata=metadata,
+            )
+            docs.append(doc)
+        return docs
