@@ -72,3 +72,6 @@ def llmama3_chain(question):
 
 * [Chatbot con Python e Langchain](https://www.diariodiunanalista.it/posts/chatbot-python-langchain-rag/)
 
+## 0.3.0
+
+CSV Ingestion
